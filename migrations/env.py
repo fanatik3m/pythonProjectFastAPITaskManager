@@ -8,6 +8,7 @@ from alembic import context
 from config import DB_NAME, DB_HOST, DB_PORT, DB_PASS, DB_USER
 
 from auth.models import *
+from tasks.models import *
 from database import Base
 
 # this is the Alembic Config object, which provides
