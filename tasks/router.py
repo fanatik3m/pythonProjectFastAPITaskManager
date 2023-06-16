@@ -1,5 +1,3 @@
-from typing import Optional
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import insert, select, delete, update
 
@@ -17,7 +15,7 @@ router = APIRouter(
 )
 
 
-@router.post('', dependencies=[])
+@router.post('')
 async def add_task(task: TaskCreate, session: AsyncSession = Depends(get_async_session),
                    user: User = Depends(current_user)):
     try:
@@ -40,13 +38,31 @@ async def add_task(task: TaskCreate, session: AsyncSession = Depends(get_async_s
 
 
 @router.get('')
-async def check_tasks(task_id: Optional[int] = None, session: AsyncSession = Depends(get_async_session),
+async def check_tasks(page: int = 1, session: AsyncSession = Depends(get_async_session),
                       user: User = Depends(current_user)):
     try:
-        if task_id:
-            query = select(Task).where(Task.id == task_id).where(Task.user_id == user.id).order_by(Task.id)
-        else:
-            query = select(Task).where(Task.user_id == user.id).order_by(Task.id)
+        offset = (page - 1) * 10
+        query = select(Task).where(Task.user_id == user.id).order_by(Task.id).limit(10).offset(offset)
+        result = await session.scalars(query)
+        data = [row for row in result]
+        return {
+            'status': 'ok',
+            'details': {},
+            'data': data
+        }
+    except Exception as ex:
+        raise HTTPException(status_code=500, detail={
+            'status': 'error',
+            'details': {'message': str(ex)},
+            'data': {}
+        })
+
+
+@router.get('/{task_id}')
+async def check_tasks(task_id: int, session: AsyncSession = Depends(get_async_session),
+                      user: User = Depends(current_user)):
+    try:
+        query = select(Task).where(Task.user_id == user.id).where(Task.id == task_id).order_by(Task.id).limit(10)
         result = await session.scalars(query)
         data = [row for row in result]
         return {

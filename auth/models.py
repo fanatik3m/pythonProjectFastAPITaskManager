@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from fastapi_users_db_sqlalchemy import SQLAlchemyBaseUserTable
+from fastapi_users.db import SQLAlchemyBaseUserTable
 from sqlalchemy import Column, Integer, String, TIMESTAMP, ForeignKey
 
 from database import Base
