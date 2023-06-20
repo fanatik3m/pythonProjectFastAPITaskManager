@@ -5,7 +5,8 @@ WORKDIR /fastapi_app
 COPY requirements.txt .
 
 RUN pip install -r requirements.txt
+RUN pip install python-dotenv
 
 COPY . .
 
-CMD gunicorn main:app --bind=0.0.0.0:8000
+RUN chmod a+x docker/app.sh
