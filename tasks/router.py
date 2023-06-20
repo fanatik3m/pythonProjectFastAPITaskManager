@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from auth.users import current_user
 from auth.models import User
 from database import get_async_session
+from repository import Repository
 from tasks.schemas import TaskCreate
 from tasks.models import Task
 
@@ -14,6 +15,8 @@ router = APIRouter(
     tags=['Task management']
 )
 
+db_repository = Repository()
+
 
 @router.post('')
 async def add_task(task: TaskCreate, session: AsyncSession = Depends(get_async_session),
@@ -21,9 +24,7 @@ async def add_task(task: TaskCreate, session: AsyncSession = Depends(get_async_s
     try:
         if task.user_id != user.id:
             task.user_id = user.id
-        stmt = insert(Task).values(**task.dict())
-        await session.execute(stmt)
-        await session.commit()
+        await db_repository.insert_user(session=session, data=task.dict())
         return {
             'status': 'ok',
             'details': {},
@@ -41,10 +42,7 @@ async def add_task(task: TaskCreate, session: AsyncSession = Depends(get_async_s
 async def check_tasks(page: int = 1, session: AsyncSession = Depends(get_async_session),
                       user: User = Depends(current_user)):
     try:
-        offset = (page - 1) * 10
-        query = select(Task).where(Task.user_id == user.id).order_by(Task.id).limit(10).offset(offset)
-        result = await session.scalars(query)
-        data = [row for row in result]
+        data = await db_repository.get_tasks_with_offset(session=session, page=page, user=user)
         return {
             'status': 'ok',
             'details': {},
@@ -62,9 +60,7 @@ async def check_tasks(page: int = 1, session: AsyncSession = Depends(get_async_s
 async def check_tasks(task_id: int, session: AsyncSession = Depends(get_async_session),
                       user: User = Depends(current_user)):
     try:
-        query = select(Task).where(Task.user_id == user.id).where(Task.id == task_id).order_by(Task.id).limit(10)
-        result = await session.scalars(query)
-        data = [row for row in result]
+        data = await db_repository.get_task_by_id(session=session, task_id=task_id, user=user)
         return {
             'status': 'ok',
             'details': {},
@@ -82,17 +78,7 @@ async def check_tasks(task_id: int, session: AsyncSession = Depends(get_async_se
 async def filter_tasks(date: bool = False, is_completed: bool = False,
                        session: AsyncSession = Depends(get_async_session), user: User = Depends(current_user)):
     try:
-        if not date and not is_completed:
-            query = select(Task).where(Task.user_id == user.id).order_by(Task.id)
-        if date and is_completed:
-            query = select(Task).where(Task.user_id == user.id).order_by(Task.id)
-
-        if date:
-            query = select(Task).where(Task.user_id == user.id).order_by(Task.created_at)
-        if is_completed:
-            query = select(Task).where(Task.user_id == user.id).order_by(Task.is_completed)
-        result = await session.scalars(query)
-        data = [row for row in result]
+        data = await db_repository.get_ordered_tasks(session=session, date=date, is_completed=is_completed, user=user)
         return {
             'status': 'ok',
             'details': {},
@@ -110,9 +96,7 @@ async def filter_tasks(date: bool = False, is_completed: bool = False,
 async def delete_tasks(task_id: int, session: AsyncSession = Depends(get_async_session),
                        user: User = Depends(current_user)):
     try:
-        stmt = delete(Task).where(Task.id == task_id).where(Task.user_id == user.id)
-        await session.execute(stmt)
-        await session.commit()
+        await db_repository.delete_task(session=session, task_id=task_id, user=user)
         return {
             'status': 'ok',
             'details': {},
@@ -130,9 +114,7 @@ async def delete_tasks(task_id: int, session: AsyncSession = Depends(get_async_s
 async def mark_as_completed(task_id: int, session: AsyncSession = Depends(get_async_session),
                             user: User = Depends(current_user)):
     try:
-        stmt = update(Task).where(Task.id == task_id).where(Task.user_id == user.id).values(is_completed=True)
-        await session.execute(stmt)
-        await session.commit()
+        await db_repository.edit_status(session=session, task_id=task_id, user=user)
         return {
             'status': 'ok',
             'detail': {},
