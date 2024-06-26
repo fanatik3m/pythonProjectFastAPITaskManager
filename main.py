@@ -32,7 +32,7 @@ app.include_router(router_tasks)
 @app.post('/role/add')
 async def add_role(data: AddRoleSchema, session: AsyncSession = Depends(get_async_session)):
     try:
-        password: str = 'admin_admin_only_password545332ksajdKJHDJKSAhdjaskdsladkasdJdKASKS'
+        password: str = '...'
         if data.password != password:
             raise HTTPException(status_code=403, detail={
                 'status': 'error',
